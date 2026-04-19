@@ -1,0 +1,35 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/
+.vite/
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Laravel (backend болса)
+vendor/
+storage/*.key
+storage/logs/
+storage/framework/
+bootstrap/cache/
+
+# Telegram bot (егер керек емес файлдар болса)
+*.session

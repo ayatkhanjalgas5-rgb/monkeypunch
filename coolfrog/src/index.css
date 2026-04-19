@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply touch-manipulation;
+  }
+
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply relative overflow-x-hidden antialiased text-white;
+    font-family: "Inter", sans-serif;
+    background:
+      radial-gradient(circle at top, rgba(255, 94, 27, 0.26), transparent 26%),
+      radial-gradient(circle at 50% 35%, rgba(255, 170, 30, 0.14), transparent 22%),
+      radial-gradient(circle at bottom, rgba(125, 16, 12, 0.22), transparent 30%),
+      linear-gradient(180deg, #130303 0%, #2a0604 34%, #180404 68%, #090202 100%);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04), transparent 18%),
+      radial-gradient(circle at 50% 0%, rgba(255, 173, 51, 0.08), transparent 22%);
+    mix-blend-mode: screen;
+    opacity: 0.9;
+  }
+
+  button {
+    @apply outline-none;
+  }
+}
+
+.text-shadow {
+  text-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.text-gradient {
+  background: linear-gradient(180deg, #fff4d9 0%, #ffb11f 55%, #ff6a1a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-shell {
+  min-height: var(--tg-viewport-height, 100vh);
+  background:
+    radial-gradient(circle at top, rgba(255, 107, 29, 0.18), transparent 18%),
+    radial-gradient(circle at bottom, rgba(255, 178, 31, 0.1), transparent 24%),
+    linear-gradient(180deg, rgba(26, 4, 4, 0.98) 0%, rgba(11, 2, 2, 0.98) 100%);
+}
+
+.glass-card {
+  background: linear-gradient(180deg, rgba(103, 18, 12, 0.96) 0%, rgba(55, 9, 8, 0.98) 100%);
+  border: 1px solid rgba(255, 115, 42, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 205, 138, 0.16),
+    0 14px 34px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(255, 123, 49, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.glass-card-soft {
+  background: linear-gradient(180deg, rgba(78, 15, 11, 0.92) 0%, rgba(46, 8, 8, 0.96) 100%);
+  border: 1px solid rgba(255, 129, 49, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 239, 213, 0.07);
+}
+
+.neon-outline {
+  box-shadow:
+    0 0 0 1px rgba(255, 126, 45, 0.24),
+    0 0 28px rgba(255, 102, 26, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.pill-blue {
+  background: linear-gradient(180deg, #ffb11f 0%, #ff6a00 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 18px rgba(255, 109, 26, 0.28);
+}
+
+.pill-gold {
+  background: linear-gradient(180deg, #ffcb42 0%, #ff8a00 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 18px rgba(255, 138, 0, 0.28);
+}
+
+.top-chip {
+  background: linear-gradient(180deg, rgba(63, 10, 8, 0.96) 0%, rgba(35, 7, 7, 0.96) 100%);
+  border: 1px solid rgba(255, 120, 40, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 180, 0.08);
+}
+
+.modal-body,
+.popup-body {
+  border-radius: 28px 28px 0 0;
+  background: linear-gradient(180deg, rgba(90, 16, 12, 0.98) 0%, rgba(17, 3, 3, 0.99) 100%);
+  border-top: 1px solid rgba(255, 127, 45, 0.26);
+  box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+}
+
+.user-tap-animate {
+  z-index: 50;
+}
+
+.user-tap-animate > div {
+  color: #ffd08a;
+  font-size: 30px;
+  font-weight: 800;
+  left: 0;
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  text-align: center;
+  user-select: none;
+  z-index: 60;
+  text-shadow: 0 0 24px rgba(255, 140, 34, 0.4);
+  animation: user-tap-animate 1s ease 0s 1;
+}
+
+@keyframes user-tap-animate {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -300%);
+  }
+}
+
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes floatHit {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -36px) scale(1.05);
+  }
+}
+
+@keyframes battlePunchGlow {
+  0% {
+    box-shadow: 0 12px 30px rgba(255,155,16,0.25);
+  }
+  50% {
+    box-shadow: 0 18px 40px rgba(255,155,16,0.55);
+  }
+  100% {
+    box-shadow: 0 12px 30px rgba(255,155,16,0.25);
+  }
+}
+
+@keyframes cardShake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
+}
+
+
