@@ -70,8 +70,13 @@ const clearBearerToken = () => {
   delete $http.defaults.headers.Authorization;
 };
 
-const setTelegramInitData = (...args: unknown[]) => {
-  void args;
+const setTelegramInitData = (rawInitData: string) => {
+  if (!rawInitData) {
+    delete $http.defaults.headers['X-Telegram-Init-Data'];
+    return;
+  }
+
+  $http.defaults.headers['X-Telegram-Init-Data'] = rawInitData;
 };
 
 export { $http, clearBearerToken, setBearerToken, setTelegramInitData };

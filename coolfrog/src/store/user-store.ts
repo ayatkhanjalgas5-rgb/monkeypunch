@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 type UserStore = UserType & {
   UserTap: () => boolean;
+  increaseEnergy: (value: number) => void;
   incraseEnergy: (value: number) => void;
 };
 
@@ -26,20 +27,27 @@ export const useUserStore = create<UserStore>((set, get) => ({
   ton_wallet: null,
   wallet_provider: null,
   is_premium: false,
+
   UserTap() {
-    if (get().available_energy < get().earn_per_tap) return false;
+    if (get().available_energy < 1) return false;
+
     set((state) => ({
-      available_energy: state.available_energy - state.earn_per_tap,
-      balance: state.balance + state.earn_per_tap,
+      available_energy: Math.max(0, state.available_energy - 1),
     }));
+
     return true;
   },
-  incraseEnergy: (value) => {
+
+  increaseEnergy: (value) => {
     set((state) => ({
       available_energy: Math.min(
         state.available_energy + value,
         state.max_energy
       ),
     }));
+  },
+
+  incraseEnergy(value) {
+    get().increaseEnergy(value);
   },
 }));

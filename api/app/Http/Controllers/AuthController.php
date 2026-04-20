@@ -19,6 +19,10 @@ class AuthController extends Controller
     public function telegramUser(Request $request)
     {
         $ip = $request->ip();
+        $limits = config('clicker.referral.limits', []);
+        $maxAccountsPerIp = (int) ($limits['max_accounts_per_ip'] ?? 3);
+        $maxReferralsPerIpPerReferrer = (int) ($limits['max_referrals_per_ip_per_referrer'] ?? 1);
+        $suspiciousThreshold = (int) ($limits['suspicious_accounts_per_ip'] ?? 2);
 
         $initData = (string) ($request->header('X-Telegram-Init-Data') ?? $request->input('init_data', ''));
         $verifiedFromMiddleware = (bool) $request->attributes->get('telegram_init_data_verified', false);
@@ -58,7 +62,7 @@ class AuthController extends Controller
         ])->validate();
 
         $levelId = (int) (Level::query()->min('id') ?: 1);
-        $startingBalance = 1000;
+        $startingBalance = (int) config('clicker.economy.starting_balance', 1000);
 
         $defaults = [
             'first_name' => $validated['first_name'],
@@ -80,6 +84,8 @@ class AuthController extends Controller
             'level_id' => $levelId,
             'last_tap_date' => now(),
             'last_login_date' => now(),
+            'suspicious_score' => 0,
+            'is_suspicious' => false,
         ];
 
         $user = TelegramUser::firstOrCreate(
@@ -89,8 +95,9 @@ class AuthController extends Controller
 
         if ($user->wasRecentlyCreated) {
             $accountsFromIp = TelegramUser::where('created_ip', $ip)->count();
+            $suspiciousScore = 0;
 
-            if ($accountsFromIp > 3) {
+            if ($accountsFromIp > $maxAccountsPerIp) {
                 $user->delete();
 
                 return response()->json([
@@ -98,24 +105,49 @@ class AuthController extends Controller
                 ], 403);
             }
 
-if (
-    ($validated['referred_by'] ?? null) &&
-    $validated['referred_by'] != $validated['telegram_id']
-) {
-    $referrer = TelegramUser::where('telegram_id', $validated['referred_by'])->first();
+            if ($accountsFromIp > $suspiciousThreshold) {
+                $suspiciousScore += 1;
+            }
 
-    if ($referrer && (string) $referrer->telegram_id !== (string) $user->telegram_id) {
-        $ipReferralCount = TelegramUser::where('created_ip', $ip)
-            ->where('referred_by', $referrer->telegram_id)
-            ->count();
+            if (($validated['referred_by'] ?? null) && $validated['referred_by'] != $validated['telegram_id']) {
+                $referrer = TelegramUser::where('telegram_id', $validated['referred_by'])->first();
 
-        if ($ipReferralCount < 2) {
-            $user->referred_by = $referrer->telegram_id;
+                if ($referrer && (string) $referrer->telegram_id !== (string) $user->telegram_id) {
+                    $ipReferralCount = TelegramUser::where('created_ip', $ip)
+                        ->where('referred_by', $referrer->telegram_id)
+                        ->count();
+
+                    if ($referrer->created_ip && $referrer->created_ip === $ip) {
+                        $suspiciousScore += 3;
+                    }
+
+                    if ($ipReferralCount <= $maxReferralsPerIpPerReferrer) {
+                        $user->referred_by = $referrer->telegram_id;
+                    } else {
+                        $suspiciousScore += 2;
+                    }
+
+                    if ($user->referred_by) {
+                        $rewardConfig = $user->is_premium
+                            ? config('clicker.referral.premium', [])
+                            : config('clicker.referral.base', []);
+
+                        $welcomeReward = (int) ($rewardConfig['welcome'] ?? 0);
+
+                        if ($welcomeReward > 0) {
+                            $this->walletService->credit($referrer, $welcomeReward, 'referral_welcome', [
+                                'from_telegram_user_id' => $user->id,
+                                'from_telegram_id' => $user->telegram_id,
+                                'ip' => $ip,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            $user->suspicious_score = $suspiciousScore;
+            $user->is_suspicious = $suspiciousScore > 0;
             $user->save();
-        }
-    }
-}
-
         }
 
         $user->fill([

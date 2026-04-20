@@ -24,9 +24,16 @@ export default function Layout() {
   }, [pathname]);
 
   useEffect(() => {
-    window.Telegram?.WebApp?.BackButton?.onClick(() => {
-      navigate("/");
-    });
+    const backButton = window.Telegram?.WebApp?.BackButton;
+    if (!backButton) return;
+
+    const handleBack = () => navigate("/");
+
+    backButton.onClick(handleBack);
+
+    return () => {
+      backButton.offClick(handleBack);
+    };
   }, [navigate]);
 
   return (

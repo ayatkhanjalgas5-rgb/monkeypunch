@@ -22,7 +22,7 @@ type StoreStateType = {
   totalReferals: number;
 };
 
-export const uesStore = create<StoreStateType>(() => ({
+export const useAppStore = create<StoreStateType>(() => ({
   boosters: {
     energy_limit: { level: 0, cost: 0, increase_by: 0 },
     multi_tap: { level: 0, cost: 0, increase_by: 0 },
@@ -49,3 +49,6 @@ export const uesStore = create<StoreStateType>(() => ({
     },
   },
 }));
+
+
+export const uesStore = useAppStore;

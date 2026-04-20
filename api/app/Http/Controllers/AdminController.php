@@ -240,7 +240,20 @@ class AdminController extends Controller
             'status' => 'approved',
             'processed_at' => now(),
             'processed_by' => auth()->id(),
-            'admin_note' => $request->input('admin_note'),
+            'admin_note' => trim((string) $request->input('admin_note', 'approved_by_admin')),
+        ]);
+
+        Transaction::create([
+            'telegram_user_id' => $withdrawRequest->telegram_user_id,
+            'type' => 'withdraw_approved',
+            'amount' => 0,
+            'balance_before' => $withdrawRequest->telegramUser->balance,
+            'balance_after' => $withdrawRequest->telegramUser->balance,
+            'admin_user_id' => auth()->id(),
+            'meta' => [
+                'withdraw_request_id' => $withdrawRequest->id,
+                'admin_note' => $withdrawRequest->admin_note,
+            ],
         ]);
 
         return redirect()->route('withdraw_requests')->with('success', 'Withdraw request approved.');
@@ -268,6 +281,7 @@ public function rejectWithdrawRequest(Request $request, WithdrawRequest $withdra
                     'reason' => 'withdraw_rejected_refund',
                     'withdraw_request_id' => $withdrawRequest->id,
                     'admin_user_id' => auth()->id(),
+                    'admin_note' => $request->input('admin_note'),
                 ]
             );
 
@@ -295,15 +309,33 @@ public function rejectWithdrawRequest(Request $request, WithdrawRequest $withdra
         $validated = $request->validate([
             'tx_hash' => 'required|string|max:255',
             'admin_note' => 'nullable|string',
+            'verification_status' => 'nullable|string|in:pending,verified,failed',
         ]);
 
         $withdrawRequest->update([
             'status' => 'paid',
             'tx_hash' => $validated['tx_hash'],
+            'verification_status' => $validated['verification_status'] ?? 'verified',
+            'verified_at' => ($validated['verification_status'] ?? 'verified') === 'verified' ? now() : null,
             'paid_at' => now(),
             'processed_at' => now(),
             'processed_by' => auth()->id(),
             'admin_note' => $validated['admin_note'] ?? $request->input('admin_note'),
+        ]);
+
+        Transaction::create([
+            'telegram_user_id' => $withdrawRequest->telegram_user_id,
+            'type' => 'withdraw_paid',
+            'amount' => 0,
+            'balance_before' => $withdrawRequest->telegramUser->balance,
+            'balance_after' => $withdrawRequest->telegramUser->balance,
+            'admin_user_id' => auth()->id(),
+            'meta' => [
+                'withdraw_request_id' => $withdrawRequest->id,
+                'tx_hash' => $validated['tx_hash'],
+                'verification_status' => $withdrawRequest->verification_status,
+                'admin_note' => $withdrawRequest->admin_note,
+            ],
         ]);
 
         return redirect()->route('withdraw_requests')->with('success', 'Withdraw request marked as paid.');

@@ -60,12 +60,12 @@ class ClickerController extends Controller
             'daily_booster' => [
                 'can_use' => $canUseDailyBooster,
                 'uses_today' => $user->daily_booster_uses,
-                'next_available_at' => $canUseDailyBooster ? now() : ($user->last_daily_booster_use ? $user->last_daily_booster_use->copy()->addHour() : null),
+                'next_available_at' => $canUseDailyBooster ? now() : ($user->last_daily_booster_use ? $user->last_daily_booster_use->copy()->addHours((int) config('clicker.economy.daily_booster_cooldown_hours', 4)) : null),
             ],
             'booster_packs' => [
-                'booster_pack_2x' => ['cost' => 2000, 'duration_days' => 30, 'multiplier' => 2],
-                'booster_pack_3x' => ['cost' => 3000, 'duration_days' => 30, 'multiplier' => 3],
-                'booster_pack_7x' => ['cost' => 10000, 'duration_days' => 30, 'multiplier' => 7],
+                'booster_pack_2x' => ['cost' => 4000, 'duration_days' => 30, 'multiplier' => 2],
+                'booster_pack_3x' => ['cost' => 7500, 'duration_days' => 30, 'multiplier' => 3],
+                'booster_pack_7x' => ['cost' => 25000, 'duration_days' => 30, 'multiplier' => 7],
             ],
             'booster_pack_2x_active' => (bool) $user->booster_pack_2x,
             'booster_pack_3x_active' => (bool) $user->booster_pack_3x,
@@ -203,9 +203,9 @@ class ClickerController extends Controller
     private function getBoosterPackCost(string $boosterPack): int
     {
         return match ($boosterPack) {
-            'booster_pack_2x' => 2000,
-            'booster_pack_3x' => 3000,
-            'booster_pack_7x' => 10000,
+            'booster_pack_2x' => 4000,
+            'booster_pack_3x' => 7500,
+            'booster_pack_7x' => 25000,
             default => throw new \InvalidArgumentException('Invalid booster pack type.'),
         };
     }
@@ -424,7 +424,7 @@ private function getBoosterCost($user, $boosterType)
                 'message' => 'Daily booster used successfully',
                 'current_energy' => $user->max_energy,
                 'daily_booster_uses' => $user->daily_booster_uses,
-                'next_available_at' => $user->last_daily_booster_use?->copy()->addHour(),
+                'next_available_at' => $user->last_daily_booster_use?->copy()->addHours((int) config('clicker.economy.daily_booster_cooldown_hours', 4)),
             ]);
         }
 
@@ -432,7 +432,7 @@ private function getBoosterCost($user, $boosterType)
             'success' => false,
             'message' => 'Cannot use daily booster at this time',
             'daily_booster_uses' => $user->daily_booster_uses,
-            'next_available_at' => $user->last_daily_booster_use ? $user->last_daily_booster_use->copy()->addHour() : null,
+            'next_available_at' => $user->last_daily_booster_use ? $user->last_daily_booster_use->copy()->addHours((int) config('clicker.economy.daily_booster_cooldown_hours', 4)) : null,
         ], 400);
     }
 
@@ -533,9 +533,10 @@ private function getBoosterCost($user, $boosterType)
     public function createWithdrawRequest(Request $request)
 {
     $validated = $request->validate([
-        'amount' => 'required|integer|min:10000',
+        'amount' => 'required|integer|min:'.config('clicker.economy.withdraw.min_amount', 10000),
         'wallet_address' => ['required', 'string', 'min:24', 'max:255', 'regex:/^(UQ|EQ|kQ|0Q)[A-Za-z0-9_\-]{40,120}$/'],
         'network' => ['nullable', 'string', 'max:32'],
+        'client_request_id' => ['nullable', 'string', 'max:120'],
     ]);
 
     $user = $request->user();
@@ -544,33 +545,44 @@ private function getBoosterCost($user, $boosterType)
     }
 
     $amount = (int) $validated['amount'];
-
-    // 🔥 1. Pending check (double request protection)
-    $hasPending = $user->withdrawRequests()
-        ->where('status', 'pending')
-        ->exists();
-
-    if ($hasPending) {
-        return response()->json([
-            'success' => false,
-            'message' => 'You already have a pending withdraw request.',
-        ], 422);
-    }
+    $clientRequestId = $validated['client_request_id'] ?? null;
 
     try {
-        DB::transaction(function () use ($user, $validated, $amount) {
+        $duplicateRequest = null;
 
-            // 🔥 2. Lock user row (race condition fix)
+        DB::transaction(function () use ($user, $validated, $amount, $clientRequestId, &$duplicateRequest) {
             $user = TelegramUser::where('id', $user->id)->lockForUpdate()->first();
 
-            if ($amount > $user->balance) {
-                throw new \Exception('Insufficient balance');
+            if ($clientRequestId) {
+                $duplicateRequest = WithdrawRequest::query()
+                    ->where('telegram_user_id', $user->id)
+                    ->where('client_request_id', $clientRequestId)
+                    ->first();
+
+                if ($duplicateRequest) {
+                    return;
+                }
+            }
+
+            $hasPending = WithdrawRequest::query()
+                ->where('telegram_user_id', $user->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->exists();
+
+            if ($hasPending) {
+                throw new \InvalidArgumentException('You already have a pending withdraw request.');
+            }
+
+            if ($amount > (int) $user->balance) {
+                throw new \InvalidArgumentException('Insufficient balance');
             }
 
             $this->walletService->debit($user, $amount, 'withdraw', [
                 'wallet_address' => $validated['wallet_address'],
                 'network' => $validated['network'] ?? 'TON',
                 'stage' => 'request_created',
+                'client_request_id' => $clientRequestId,
             ]);
 
             $user->ton_wallet = $validated['wallet_address'];
@@ -582,9 +594,25 @@ private function getBoosterCost($user, $boosterType)
                 'wallet_address' => $validated['wallet_address'],
                 'network' => $validated['network'] ?? 'TON',
                 'status' => 'pending',
+                'client_request_id' => $clientRequestId,
+                'verification_status' => 'pending',
             ]);
         });
 
+        if ($duplicateRequest) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Withdraw request already exists.',
+                'balance' => (int) $user->fresh()->balance,
+                'pending_total' => (int) $this->walletService->withdrawSummary($user->fresh(), 20)['pending_total'],
+            ]);
+        }
+
+    } catch (\InvalidArgumentException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+        ], 422);
     } catch (\Throwable $e) {
         return response()->json([
             'success' => false,

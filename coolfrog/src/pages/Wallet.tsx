@@ -256,6 +256,7 @@ export default function Wallet() {
           amount: withdrawAmount,
           wallet_address: normalizedWalletAddress,
           network: "TON",
+          client_request_id: `wd-${Date.now()}-${withdrawAmount}`,
         }
       );
 

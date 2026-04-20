@@ -7,6 +7,7 @@ use App\Models\BattleRoom;
 use App\Models\TelegramUser;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -15,6 +16,8 @@ class BattleController extends Controller
     private const QUEUE_TIMEOUT_SECONDS = 8;
     private const COUNTDOWN_SECONDS = 3;
     private const BATTLE_DURATION_SECONDS = 15;
+    private const MAX_HIT_RATE_PER_SECOND = 5;
+    private const MIN_MILLISECONDS_BETWEEN_HITS = 120;
 
     private const ROOM_TIERS = [
         'bronze' => 500,
@@ -327,6 +330,30 @@ class BattleController extends Controller
         if ((int) $user->available_energy <= 0) {
             return response()->json(['message' => 'Not enough energy.'], 422);
         }
+
+        $userHitKey = sprintf('battle-hit:%s:%s', $room->id, $user->id);
+        $lastHitAt = (float) Cache::get($userHitKey.':last', 0);
+        $nowMicro = microtime(true);
+
+        if ($lastHitAt > 0 && (($nowMicro - $lastHitAt) * 1000) < self::MIN_MILLISECONDS_BETWEEN_HITS) {
+            return response()->json(['message' => 'Punching too fast.'], 429);
+        }
+
+        $bucket = Cache::get($userHitKey.':bucket', ['window' => time(), 'count' => 0]);
+        $window = (int) ($bucket['window'] ?? time());
+        $count = (int) ($bucket['count'] ?? 0);
+
+        if ($window !== time()) {
+            $window = time();
+            $count = 0;
+        }
+
+        if ($count >= self::MAX_HIT_RATE_PER_SECOND) {
+            return response()->json(['message' => 'Hit rate exceeded.'], 429);
+        }
+
+        Cache::put($userHitKey.':last', $nowMicro, now()->addSeconds(30));
+        Cache::put($userHitKey.':bucket', ['window' => $window, 'count' => $count + 1], now()->addSeconds(30));
 
         DB::transaction(function () use ($room, $user) {
             $room->refresh();

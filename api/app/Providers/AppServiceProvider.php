@@ -33,6 +33,15 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(240)->by('tap-minute-'.$key),
             ];
         });
+
+        RateLimiter::for('battle-punch', function (Request $request) {
+            $key = $request->user()?->id ?: $request->ip();
+
+            return [
+                Limit::perSecond(6)->by('battle-second-'.$key),
+                Limit::perMinute(180)->by('battle-minute-'.$key),
+            ];
+        });
     }
 
     private function assertProductionConfig(): void

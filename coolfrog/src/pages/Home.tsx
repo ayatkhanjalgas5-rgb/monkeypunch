@@ -8,8 +8,10 @@ export default function Home() {
   const user = useUserStore();
   const { maxLevel } = uesStore();
 
+  const levelFloor = user.level?.from_balance || 0;
   const levelCap = user.level?.to_balance || 1;
-  const progress = Math.min(((user.balance || 0) / levelCap) * 100, 100);
+  const levelSpan = Math.max(levelCap - levelFloor, 1);
+  const progress = Math.min(Math.max((((user.balance || 0) - levelFloor) / levelSpan) * 100, 0), 100);
   const remaining = Math.max(levelCap - (user.balance || 0), 0);
 
   return (
