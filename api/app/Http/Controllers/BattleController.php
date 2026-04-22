@@ -336,8 +336,13 @@ class BattleController extends Controller
         $nowMicro = microtime(true);
 
         if ($lastHitAt > 0 && (($nowMicro - $lastHitAt) * 1000) < self::MIN_MILLISECONDS_BETWEEN_HITS) {
-            return response()->json(['message' => 'Punching too fast.'], 429);
-        }
+    return response()->json([
+        'success' => true,
+        'accepted' => false,
+        'room' => $this->serializeRoom($room->fresh(), $user->fresh()),
+        'user' => $this->userState($user->fresh()),
+    ]);
+}
 
         $bucket = Cache::get($userHitKey.':bucket', ['window' => time(), 'count' => 0]);
         $window = (int) ($bucket['window'] ?? time());
@@ -349,8 +354,13 @@ class BattleController extends Controller
         }
 
         if ($count >= self::MAX_HIT_RATE_PER_SECOND) {
-            return response()->json(['message' => 'Hit rate exceeded.'], 429);
-        }
+    return response()->json([
+        'success' => true,
+        'accepted' => false,
+        'room' => $this->serializeRoom($room->fresh(), $user->fresh()),
+        'user' => $this->userState($user->fresh()),
+    ]);
+}
 
         Cache::put($userHitKey.':last', $nowMicro, now()->addSeconds(30));
         Cache::put($userHitKey.':bucket', ['window' => $window, 'count' => $count + 1], now()->addSeconds(30));

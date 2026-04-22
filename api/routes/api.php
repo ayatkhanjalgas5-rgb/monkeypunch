@@ -20,7 +20,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('clicker')->group(function () {
         Route::get('/sync', [ClickerController::class, 'sync']);
-        Route::post('/tap', [ClickerController::class, 'tap'])->middleware('throttle:clicker-tap');
+        Route::post('/tap', [ClickerController::class, 'tap']);
         Route::post('/buy-booster', [ClickerController::class, 'buyBooster']);
         Route::post('/buy-booster-pack', [ClickerController::class, 'buyBoosterPack']);
         Route::get('/daily-tasks', [ClickerController::class, 'listDailyTasks']);
@@ -41,7 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/withdraw-requests', [ClickerController::class, 'createWithdrawRequest']);
         Route::get('/battle/current', [BattleController::class, 'current']);
         Route::post('/battle/start', [BattleController::class, 'start']);
-        Route::post('/battle/punch', [BattleController::class, 'punch'])->middleware('throttle:battle-punch');
+        Route::post('/battle/punch', [BattleController::class, 'punch']);
         Route::post('/battle/boost', [BattleController::class, 'boost']);
         Route::post('/battle/finish', [BattleController::class, 'finish']);
         Route::post('/battle/accept', [BattleController::class, 'accept']);

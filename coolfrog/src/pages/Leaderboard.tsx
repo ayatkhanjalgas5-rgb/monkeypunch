@@ -26,6 +26,37 @@ type LeaderboardResponse = {
   rewards: { rank: number; diamonds: number }[];
 };
 
+const getLevelImage = (levelId: number | null | undefined) => {
+  const safeLevel = levelId || 1;
+
+  return (
+    levelConfig.frogs?.[safeLevel] ||
+    levelConfig.frogs?.[1] ||
+    "/images/levels/1.png"
+  );
+};
+
+const getRarityLevelKey = (levelId: number | null | undefined) => {
+  const safeLevel = Number(levelId || 1);
+
+  if (safeLevel >= 9) return 5;
+  if (safeLevel >= 7) return 4;
+  if (safeLevel >= 5) return 3;
+  if (safeLevel >= 3) return 2;
+
+  return 1;
+};
+
+const getLevelFilter = (levelId: number | null | undefined) => {
+  const safeLevel = levelId || 1;
+
+  return (
+    levelConfig.filter?.[safeLevel] ||
+    levelConfig.filter?.[1] ||
+    "none"
+  );
+};
+
 export default function Leaderboard() {
   const [endsAt, setEndsAt] = useState<string | null>(null);
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
@@ -34,27 +65,47 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState("--");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await $http.get<LeaderboardResponse>("/clicker/weekly-leaderboard");
-        setUsers(res.data.items || []);
-        setMe(res.data.me || null);
-        setMyRank(res.data.my_rank ?? null);
-        setEndsAt(res.data.week?.ends_at || null);
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          console.error(error.response?.data || error.message);
-        } else {
-          console.error(error);
-        }
-      } finally {
+useEffect(() => {
+  let mounted = true;
+
+  const load = async (silent = false) => {
+    try {
+      if (!silent) {
+        setLoading(true);
+      }
+
+      const res = await $http.get<LeaderboardResponse>("/clicker/weekly-leaderboard");
+
+      if (!mounted) return;
+
+      setUsers(res.data.items || []);
+      setMe(res.data.me || null);
+      setMyRank(res.data.my_rank ?? null);
+      setEndsAt(res.data.week?.ends_at || null);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error(error.response?.data || error.message);
+      } else {
+        console.error(error);
+      }
+    } finally {
+      if (mounted && !silent) {
         setLoading(false);
       }
-    };
+    }
+  };
 
-    load();
-  }, []);
+  load();
+
+  const interval = setInterval(() => {
+    load(true);
+  }, 5000);
+
+  return () => {
+    mounted = false;
+    clearInterval(interval);
+  };
+}, []);
 
   useEffect(() => {
     if (!endsAt) return;
@@ -123,12 +174,15 @@ export default function Leaderboard() {
               <div className="absolute -top-5 text-2xl drop-shadow-[0_0_10px_rgba(255,208,138,0.8)]">👑</div>
             )}
 
-            <img
-              src={levelConfig.frogs[user.level_id || 1]}
-              alt="level"
-              className="h-16 w-16 object-contain"
-              style={{ filter: levelConfig.filter[user.level_id || 1] }}
-            />
+<img
+  src={getLevelImage(getRarityLevelKey(user.level_id))}
+  alt="level"
+  className="h-16 w-16 object-contain"
+  style={{ filter: getLevelFilter(getRarityLevelKey(user.level_id)) }}
+  onError={(e) => {
+    e.currentTarget.src = getLevelImage(1);
+  }}
+/>
           </div>
 
           <div className="mb-2 text-center">
@@ -236,11 +290,14 @@ export default function Leaderboard() {
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <img
-                    src={levelConfig.frogs[u.level_id || 1]}
-                    alt="level"
-                    className="h-10 w-10 object-contain"
-                    style={{ filter: levelConfig.filter[u.level_id || 1] }}
-                  />
+  src={getLevelImage(getRarityLevelKey(u.level_id))}
+  alt="level"
+  className="h-10 w-10 object-contain"
+  style={{ filter: getLevelFilter(getRarityLevelKey(u.level_id)) }}
+  onError={(e) => {
+    e.currentTarget.src = getLevelImage(1);
+  }}
+/>
 
                   <div className={`w-12 text-lg font-black ${isMe ? "text-[#ffd08a]" : "text-white/60"}`}>
                     #{rank}

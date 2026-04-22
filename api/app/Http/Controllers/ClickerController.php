@@ -86,35 +86,81 @@ class ClickerController extends Controller
         ]);
     }
 
-    public function tap(Request $request)
-    {
-        $validated = $request->validate([
-            'count' => 'required|integer|min:1|max:20',
-        ]);
+public function tap(Request $request)
+{
+    $validated = $request->validate([
+        'count' => 'required|integer|min:1|max:100',
+    ]);
 
-        /** @var TelegramUser|null $user */
-        $user = $request->user();
+    /** @var TelegramUser|null $user */
+    $user = $request->user();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated',
-            ], 401);
-        }
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthenticated',
+        ], 401);
+    }
 
-        $earned = $user->tap($validated['count']);
+    $user->restoreEnergy();
+
+    $requestedCount = (int) $validated['count'];
+    $energyPerTap = max(1, (int) $user->earn_per_tap);
+
+    $maxPossibleTaps = intdiv(
+        max(0, (int) $user->available_energy),
+        $energyPerTap
+    );
+
+    $actualCount = min($requestedCount, $maxPossibleTaps);
+
+    if ($actualCount <= 0) {
         $user->refresh()->load('level');
 
         return response()->json([
             'success' => true,
-            'earned' => $earned,
-            'balance' => $user->balance,
-            'available_energy' => $user->available_energy,
+            'earned' => 0,
+            'counted_taps' => 0,
+            'requested_taps' => $requestedCount,
+            'balance' => (int) $user->balance,
+            'available_energy' => (int) $user->available_energy,
             'level' => $user->level,
-            'earn_per_tap' => $user->earn_per_tap,
-            'max_energy' => $user->max_energy,
+            'earn_per_tap' => (int) $user->earn_per_tap,
+            'max_energy' => (int) $user->max_energy,
+            'message' => 'Not enough energy.',
         ]);
     }
+
+    $earned = $actualCount * (int) $user->earn_per_tap;
+    $spentEnergy = $actualCount * $energyPerTap;
+
+$this->walletService->credit(
+    $user,
+    $earned,
+    'tap',
+    [
+        'count' => $actualCount
+    ]
+);
+
+// энергияны бөлек азайтамыз
+$user->available_energy = max(0, (int) $user->available_energy - $spentEnergy);
+$user->save();
+
+    $user->refresh()->load('level');
+
+    return response()->json([
+        'success' => true,
+        'earned' => $earned,
+        'counted_taps' => $actualCount,
+        'requested_taps' => $requestedCount,
+        'balance' => (int) $user->balance,
+        'available_energy' => (int) $user->available_energy,
+        'level' => $user->level,
+        'earn_per_tap' => (int) $user->earn_per_tap,
+        'max_energy' => (int) $user->max_energy,
+    ]);
+}
 
     public function buyBoosterPack(Request $request)
     {
