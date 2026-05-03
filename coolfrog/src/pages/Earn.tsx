@@ -168,7 +168,17 @@ function EarnOverview() {
                 return (
                   <button
                     key={task.id}
-                    onClick={() => setSelectedTask(task)}
+                    onClick={() => {
+  if (task.link) {
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.openLink(task.link);
+    } else {
+      window.open(task.link, "_blank");
+    }
+  }
+
+  setSelectedTask(task);
+}}
                     className="glass-card-soft flex items-center justify-between rounded-2xl px-4 py-4 text-left"
                   >
                     <div className="flex items-center gap-3">

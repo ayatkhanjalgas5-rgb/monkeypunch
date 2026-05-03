@@ -197,7 +197,7 @@ export default function UserTap(props: React.HTMLProps<HTMLDivElement>) {
 
   return (
     <div {...props}>
-      <div className="relative mt-6 flex justify-center">
+    <div className="relative mt-3 min-[430px]:mt-6 flex justify-center">
         <div
           className={`absolute inset-x-10 top-8 h-56 rounded-full blur-3xl ${rarity.particleClass} ${
             currentLevel >= 7 ? "animate-pulse" : ""
@@ -211,7 +211,7 @@ export default function UserTap(props: React.HTMLProps<HTMLDivElement>) {
 
         <button
           ref={userTapButtonRef}
-          className={`relative flex h-[290px] w-[290px] items-center justify-center rounded-full border bg-[radial-gradient(circle_at_top,_rgba(255,190,88,0.78),_rgba(133,27,19,0.96)_38%,_rgba(34,5,5,0.99)_70%)] p-4 transition-all disabled:cursor-not-allowed disabled:opacity-80 ${rarity.ringClass} ${rarity.glowClass}`}
+          className={`relative flex h-[245px] w-[245px] min-[430px]:h-[290px] min-[430px]:w-[290px] items-center justify-center rounded-full border bg-[radial-gradient(circle_at_top,_rgba(255,190,88,0.78),_rgba(133,27,19,0.96)_38%,_rgba(34,5,5,0.99)_70%)] p-4 transition-all disabled:cursor-not-allowed disabled:opacity-80 ${rarity.ringClass} ${rarity.glowClass}`}
           disabled={user.available_energy < 1}
           onPointerUp={tabMe}
         >
@@ -237,13 +237,13 @@ export default function UserTap(props: React.HTMLProps<HTMLDivElement>) {
             src={levelImage}
             alt="level image"
             className={`relative z-10 object-contain transition-all duration-300 ${
-              currentLevel >= 9
-                ? "h-[270px] w-[270px]"
-                : currentLevel >= 7
-                ? "h-[266px] w-[266px]"
-                : currentLevel >= 5
-                ? "h-[262px] w-[262px]"
-                : "h-64 w-64"
+            currentLevel >= 9
+  ? "h-[225px] w-[225px] min-[430px]:h-[270px] min-[430px]:w-[270px]"
+  : currentLevel >= 7
+  ? "h-[222px] w-[222px] min-[430px]:h-[266px] min-[430px]:w-[266px]"
+  : currentLevel >= 5
+  ? "h-[218px] w-[218px] min-[430px]:h-[262px] min-[430px]:w-[262px]"
+  : "h-[216px] w-[216px] min-[430px]:h-64 min-[430px]:w-64"
             }`}
             style={{ filter: levelFilter }}
             onError={(e) => {
@@ -271,7 +271,7 @@ export default function UserTap(props: React.HTMLProps<HTMLDivElement>) {
 
       <div ref={userAnimateRef} className="user-tap-animate" />
 
-      <div className="mt-5 rounded-[22px] border border-[#ff8f3a22] bg-[#3a0d0acc] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+     <div className="mt-3 min-[430px]:mt-5 rounded-[22px]  border border-[#ff8f3a22] bg-[#3a0d0acc] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         <div className="flex items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-2 font-semibold">
             <Zap className="h-5 w-5 text-[#ffb11f]" />

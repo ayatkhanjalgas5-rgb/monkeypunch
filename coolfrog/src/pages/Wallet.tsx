@@ -86,7 +86,7 @@ export default function Wallet() {
   const [pendingTotal, setPendingTotal] = useState(0);
   const [items, setItems] = useState<WithdrawItem[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-
+  const [activeTab, setActiveTab] = useState<"wallet" | "connect" | "withdraw" | "history">("wallet");
   const normalizedWalletAddress = useMemo(
     () => normalizeWalletAddress(walletAddress || user.ton_wallet || ""),
     [walletAddress, user.ton_wallet]
@@ -286,20 +286,28 @@ export default function Wallet() {
   return (
     <div className="flex flex-1 flex-col px-4 pb-24 pt-4">
       <div className="top-chip flex items-center justify-between rounded-full p-1">
-        {["Wallet", "TON Connect", "Withdraw", "History"].map((tab, index) => (
-          <button
-            key={tab}
-            className={
-              index === 0
-                ? "pill-blue flex-1 rounded-full px-4 py-3 text-sm font-bold text-white"
-                : "flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white/60"
-            }
-          >
-            {tab}
-          </button>
-        ))}
+        {[
+  { key: "wallet", label: "Wallet" },
+  { key: "connect", label: "TON Connect" },
+  { key: "withdraw", label: "Withdraw" },
+  { key: "history", label: "History" },
+].map((tab) => (
+  <button
+    key={tab.key}
+    onClick={() => setActiveTab(tab.key as any)}
+    className={
+      activeTab === tab.key
+        ? "pill-blue flex-1 rounded-full px-4 py-3 text-sm font-bold text-white"
+        : "flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white/60"
+    }
+  >
+    {tab.label}
+  </button>
+))}
       </div>
 
+     {(activeTab === "wallet" || activeTab === "connect") && (
+	 
       <div className="glass-card mt-4 rounded-[30px] p-5 text-center">
         <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,_rgba(255,196,92,0.88),_rgba(126,28,18,0.96)_60%,_rgba(28,4,4,1)_100%)] shadow-[0_0_50px_rgba(255,120,40,0.28)]">
           <Wallet2 className="h-16 w-16 text-white" />
@@ -365,7 +373,8 @@ export default function Wallet() {
           </div>
         </div>
       </div>
-
+	  )}
+      {activeTab === "withdraw" && (
       <div className="glass-card mt-4 rounded-[30px] p-4">
         <div className="grid gap-4">
           <label className="glass-card-soft rounded-3xl px-4 py-4 text-left">
@@ -435,7 +444,9 @@ export default function Wallet() {
           </div>
         </div>
       </div>
-
+     )}
+	 {activeTab === "history" && (
+  <>
       <div className="glass-card mt-4 rounded-[30px] p-4">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs uppercase tracking-[0.2em] text-white/45">
@@ -544,6 +555,8 @@ export default function Wallet() {
           )}
         </div>
       </div>
+    </>
+  )}
     </div>
   );
 }
